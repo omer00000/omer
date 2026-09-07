@@ -2,24 +2,26 @@ package com.omerfaruk.mesaitakvimi;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.TimePickerDialog;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
-import android.text.InputType;
+import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.text.DateFormatSymbols;
 import java.util.Calendar;
@@ -37,19 +39,25 @@ public class MainActivity extends Activity {
     private static final int ACCENT_SOFT = Color.rgb(24, 48, 77);
     private static final int GREEN = Color.rgb(91, 214, 153);
 
+    private static final String PREFS_NAME = "mesai_kayitlari";
+    private static final String PREFIX_MINUTES = "m:";
+
     private final Locale tr = new Locale("tr", "TR");
+
     private Calendar shownMonth;
     private SharedPreferences prefs;
     private TextView monthTitle;
     private TextView totalText;
     private GridLayout calendarGrid;
+    private LinearLayout calendarSection;
     private GestureDetector gestureDetector;
+    private boolean monthAnimating = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        prefs = getSharedPreferences("mesai_kayitlari", MODE_PRIVATE);
+        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         shownMonth = Calendar.getInstance(tr);
         shownMonth.set(Calendar.DAY_OF_MONTH, 1);
 
@@ -61,7 +69,9 @@ public class MainActivity extends Activity {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
-        gestureDetector.onTouchEvent(event);
+        if (gestureDetector != null) {
+            gestureDetector.onTouchEvent(event);
+        }
         return super.dispatchTouchEvent(event);
     }
 
@@ -106,7 +116,7 @@ public class MainActivity extends Activity {
 
         TextView prev = navButton("‹");
         prev.setContentDescription("Önceki ay");
-        prev.setOnClickListener(v -> changeMonth(-1));
+        prev.setOnClickListener(v -> animateMonthChange(-1));
         nav.addView(prev);
 
         monthTitle = new TextView(this);
@@ -118,7 +128,7 @@ public class MainActivity extends Activity {
 
         TextView next = navButton("›");
         next.setContentDescription("Sonraki ay");
-        next.setOnClickListener(v -> changeMonth(1));
+        next.setOnClickListener(v -> animateMonthChange(1));
         nav.addView(next);
 
         root.addView(nav);
@@ -134,6 +144,9 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        calendarSection = new LinearLayout(this);
+        calendarSection.setOrientation(LinearLayout.VERTICAL);
+
         LinearLayout weekHeader = new LinearLayout(this);
         weekHeader.setOrientation(LinearLayout.HORIZONTAL);
         weekHeader.setPadding(0, dp(14), 0, dp(5));
@@ -147,7 +160,7 @@ public class MainActivity extends Activity {
             day.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
             weekHeader.addView(day, new LinearLayout.LayoutParams(0, dp(34), 1f));
         }
-        root.addView(weekHeader);
+        calendarSection.addView(weekHeader);
 
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
@@ -162,7 +175,12 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        root.addView(scroll, new LinearLayout.LayoutParams(
+        calendarSection.addView(scroll, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                0,
+                1f));
+
+        root.addView(calendarSection, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 0,
                 1f));
@@ -185,13 +203,13 @@ public class MainActivity extends Activity {
         }
 
         int maxDay = shownMonth.getActualMaximum(Calendar.DAY_OF_MONTH);
-        double total = 0;
+        int totalMinutes = 0;
 
         for (int day = 1; day <= maxDay; day++) {
             String key = makeKey(shownMonth.get(Calendar.YEAR), shownMonth.get(Calendar.MONTH), day);
-            double hours = getHours(key);
-            total += hours;
-            addDayCell(day, key, hours);
+            int minutes = getStoredMinutes(key);
+            totalMinutes += minutes;
+            addDayCell(day, key, minutes);
         }
 
         int trailing = (7 - ((mondayIndex + maxDay) % 7)) % 7;
@@ -199,7 +217,7 @@ public class MainActivity extends Activity {
             addBlankCell();
         }
 
-        totalText.setText("Bu ay toplam  •  " + formatHours(total) + " saat");
+        totalText.setText("Bu ay toplam  •  " + formatTotalMinutes(totalMinutes));
     }
 
     private void addBlankCell() {
@@ -211,9 +229,9 @@ public class MainActivity extends Activity {
         calendarGrid.addView(blank);
     }
 
-    private void addDayCell(int day, String key, double hours) {
+    private void addDayCell(int day, String key, int minutes) {
         boolean today = isToday(day);
-        boolean hasHours = hours > 0;
+        boolean hasHours = minutes > 0;
 
         LinearLayout cell = new LinearLayout(this);
         cell.setOrientation(LinearLayout.VERTICAL);
@@ -235,7 +253,7 @@ public class MainActivity extends Activity {
         cell.addView(dayNo);
 
         TextView hourText = new TextView(this);
-        hourText.setText(hasHours ? formatHours(hours) + " sa" : "");
+        hourText.setText(hasHours ? formatDayMinutes(minutes) : "");
         hourText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         hourText.setTextColor(hasHours ? GREEN : TEXT_MUTED);
         hourText.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
@@ -243,7 +261,7 @@ public class MainActivity extends Activity {
         hourText.setPadding(0, dp(6), 0, 0);
         cell.addView(hourText);
 
-        cell.setOnClickListener(v -> showHourDialog(day, key, hours));
+        cell.setOnClickListener(v -> showTimePicker(day, key, minutes));
 
         GridLayout.LayoutParams lp = cellParams();
         lp.setMargins(dp(3), dp(3), dp(3), dp(3));
@@ -259,89 +277,80 @@ public class MainActivity extends Activity {
         return lp;
     }
 
-    private void showHourDialog(int day, String key, double currentHours) {
+    private void showTimePicker(int day, String key, int currentMinutes) {
         String[] months = new DateFormatSymbols(tr).getMonths();
         String dateText = day + " " + capitalize(months[shownMonth.get(Calendar.MONTH)]) + " " + shownMonth.get(Calendar.YEAR);
 
-        EditText input = new EditText(this);
-        input.setHint("Örn: 2 veya 2,5");
-        input.setHintTextColor(Color.rgb(117, 132, 151));
-        input.setTextColor(TEXT);
-        input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
-        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        input.setSelectAllOnFocus(true);
-        input.setText(currentHours > 0 ? formatHours(currentHours) : "");
-        input.setSingleLine(true);
-        input.setPadding(dp(14), dp(12), dp(14), dp(12));
-        input.setBackground(rounded(SURFACE_ALT, STROKE, 12, 1));
+        int initialHour = currentMinutes / 60;
+        int initialMinute = currentMinutes % 60;
 
-        LinearLayout holder = new LinearLayout(this);
-        holder.setPadding(dp(22), dp(4), dp(22), 0);
-        holder.addView(input, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle(dateText)
-                .setMessage("Mesai saati")
-                .setView(holder)
-                .setNegativeButton("İptal", null)
-                .setNeutralButton("Sil", null)
-                .setPositiveButton("Kaydet", null)
-                .create();
-
-        dialog.setOnShowListener(d -> {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-                String raw = input.getText().toString().trim().replace(',', '.');
-                if (raw.isEmpty()) {
-                    prefs.edit().remove(key).apply();
-                    dialog.dismiss();
-                    refreshCalendar();
-                    return;
-                }
-
-                try {
-                    double value = Double.parseDouble(raw);
-                    if (value < 0 || value > 24) {
-                        Toast.makeText(this, "0 ile 24 saat arasında bir değer girin.", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    if (value == 0) {
+        TimePickerDialog dialog = new TimePickerDialog(
+                this,
+                AlertDialog.THEME_DEVICE_DEFAULT_DARK,
+                (view, hourOfDay, minute) -> {
+                    int totalMinutes = hourOfDay * 60 + minute;
+                    if (totalMinutes <= 0) {
                         prefs.edit().remove(key).apply();
                     } else {
-                        prefs.edit().putString(key, String.valueOf(value)).apply();
+                        prefs.edit().putString(key, PREFIX_MINUTES + totalMinutes).apply();
                     }
-
-                    dialog.dismiss();
                     refreshCalendar();
-                } catch (NumberFormatException e) {
-                    Toast.makeText(this, "Geçerli bir saat değeri girin.", Toast.LENGTH_SHORT).show();
-                }
-            });
+                },
+                initialHour,
+                initialMinute,
+                true
+        );
 
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
-                prefs.edit().remove(key).apply();
-                dialog.dismiss();
-                refreshCalendar();
-            });
+        dialog.setTitle(dateText + " • Mesai süresi");
+        dialog.setButton(DialogInterface.BUTTON_NEUTRAL, "Sil", (d, which) -> {
+            prefs.edit().remove(key).apply();
+            refreshCalendar();
         });
-
+        dialog.setButton(DialogInterface.BUTTON_NEGATIVE, "İptal", (d, which) -> d.dismiss());
         dialog.show();
+    }
+
+    private void animateMonthChange(int amount) {
+        if (monthAnimating || calendarSection == null) return;
+        monthAnimating = true;
+
+        int width = calendarSection.getWidth();
+        if (width <= 0) {
+            width = getResources().getDisplayMetrics().widthPixels;
+        }
+
+        final float outX = amount > 0 ? -width : width;
+        final float inX = -outX;
+
+        calendarSection.animate()
+                .translationX(outX)
+                .alpha(0.55f)
+                .setDuration(170)
+                .setInterpolator(new AccelerateDecelerateInterpolator())
+                .withEndAction(() -> {
+                    shownMonth.add(Calendar.MONTH, amount);
+                    shownMonth.set(Calendar.DAY_OF_MONTH, 1);
+                    refreshCalendar();
+
+                    calendarSection.setTranslationX(inX);
+                    calendarSection.setAlpha(0.55f);
+                    calendarSection.animate()
+                            .translationX(0f)
+                            .alpha(1f)
+                            .setDuration(220)
+                            .setInterpolator(new DecelerateInterpolator())
+                            .withEndAction(() -> monthAnimating = false)
+                            .start();
+                })
+                .start();
     }
 
     private void showSettings() {
         new AlertDialog.Builder(this)
                 .setTitle("Ayarlar")
-                .setMessage("Mesai Takvimi\n\nYapımcı: Ömer Faruk Boz\nSürüm: 1.1")
+                .setMessage("Mesai Takvimi\n\nYapımcı: Ömer Faruk Boz\nSürüm: 1.2")
                 .setPositiveButton("Tamam", null)
                 .show();
-    }
-
-    private void changeMonth(int amount) {
-        shownMonth.add(Calendar.MONTH, amount);
-        shownMonth.set(Calendar.DAY_OF_MONTH, 1);
-        refreshCalendar();
     }
 
     private boolean isToday(int day) {
@@ -383,9 +392,19 @@ public class MainActivity extends Activity {
         return drawable;
     }
 
-    private double getHours(String key) {
+    private int getStoredMinutes(String key) {
+        String raw = prefs.getString(key, "");
+        if (TextUtils.isEmpty(raw)) return 0;
+
         try {
-            return Double.parseDouble(prefs.getString(key, "0"));
+            if (raw.startsWith(PREFIX_MINUTES)) {
+                return Integer.parseInt(raw.substring(PREFIX_MINUTES.length()));
+            }
+
+            // 1.1 ve önceki sürümlerdeki ondalık saat kayıtlarını koru.
+            double hours = Double.parseDouble(raw.replace(',', '.'));
+            if (hours <= 0) return 0;
+            return (int) Math.round(hours * 60.0);
         } catch (Exception e) {
             return 0;
         }
@@ -395,14 +414,22 @@ public class MainActivity extends Activity {
         return String.format(tr, "%04d-%02d-%02d", year, monthZeroBased + 1, day);
     }
 
-    private String formatHours(double value) {
-        if (Math.abs(value - Math.rint(value)) < 0.00001) {
-            return String.valueOf((int) Math.rint(value));
+    private String formatDayMinutes(int minutes) {
+        int hours = minutes / 60;
+        int mins = minutes % 60;
+        if (mins == 0) {
+            return hours + " sa";
         }
-        String text = String.format(tr, "%.2f", value);
-        while (text.endsWith("0")) text = text.substring(0, text.length() - 1);
-        if (text.endsWith(",")) text = text.substring(0, text.length() - 1);
-        return text;
+        return String.format(tr, "%d:%02d sa", hours, mins);
+    }
+
+    private String formatTotalMinutes(int minutes) {
+        int hours = minutes / 60;
+        int mins = minutes % 60;
+        if (mins == 0) {
+            return hours + " saat";
+        }
+        return hours + " sa " + mins + " dk";
     }
 
     private String capitalize(String value) {
@@ -415,8 +442,8 @@ public class MainActivity extends Activity {
     }
 
     private class SwipeListener extends GestureDetector.SimpleOnGestureListener {
-        private static final int MIN_DISTANCE = 110;
-        private static final int MIN_VELOCITY = 120;
+        private static final int MIN_DISTANCE = 90;
+        private static final int MIN_VELOCITY = 100;
 
         @Override
         public boolean onDown(MotionEvent e) {
@@ -427,13 +454,13 @@ public class MainActivity extends Activity {
         public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
             if (e1 == null || e2 == null) return false;
 
-            float dx = e2.getX() - e1.getX();
-            float dy = e2.getY() - e1.getY();
+            float diffX = e2.getX() - e1.getX();
+            float diffY = e2.getY() - e1.getY();
 
-            if (Math.abs(dx) > Math.abs(dy)
-                    && Math.abs(dx) > MIN_DISTANCE
+            if (Math.abs(diffX) > Math.abs(diffY)
+                    && Math.abs(diffX) > MIN_DISTANCE
                     && Math.abs(velocityX) > MIN_VELOCITY) {
-                changeMonth(dx < 0 ? 1 : -1);
+                animateMonthChange(diffX < 0 ? 1 : -1);
                 return true;
             }
             return false;
