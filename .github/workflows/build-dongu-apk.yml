@@ -1,0 +1,48 @@
+name: Döngü APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main", "master" ]
+    paths:
+      - "dongu/**"
+      - ".github/workflows/build-dongu-apk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Kaynak kodu al
+        uses: actions/checkout@v4
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle kur
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Android SDK 35'i doğrula
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" || true
+
+      - name: APK derle
+        working-directory: dongu
+        run: gradle --no-daemon :app:assembleDebug
+
+      - name: APK adını düzenle
+        run: cp dongu/app/build/outputs/apk/debug/app-debug.apk Dongu.apk
+
+      - name: APK dosyasını yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dongu-APK
+          path: Dongu.apk
+          retention-days: 30
