@@ -1,4 +1,4 @@
-name: Build APK
+name: Mesai Takvimi APK
 
 on:
   workflow_dispatch:
@@ -20,11 +20,11 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build debug APK
+      - name: APK derle
         run: gradle :app:assembleDebug
 
-      - name: Upload APK
+      - name: APK dosyasını yükle
         uses: actions/upload-artifact@v4
         with:
-          name: GalaxyFinderShortcut-APK
+          name: Mesai-Takvimi-APK
           path: app/build/outputs/apk/debug/app-debug.apk
