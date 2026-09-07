@@ -1,15 +1,20 @@
-# Galaxy Finder Shortcut
+# Mesai Takvimi
 
-Samsung Galaxy Finder ekranını doğrudan açan küçük Android uygulaması.
+Android için basit, çevrimdışı mesai takip uygulaması.
 
-Hedef activity:
-`com.samsung.android.app.galaxyfinder/.GalaxyFinderActivity`
+## Özellikler
+- Aylık takvim görünümü
+- Her güne dokunarak mesai saati ekleme / değiştirme / silme
+- Girilen mesai saatini gün kutusunda gösterme
+- Seçili ayın toplam mesai saatini otomatik hesaplama
+- Önceki ve sonraki aylara geçiş
+- Kayıtları cihazda yerel olarak saklama
+- Ayarlar bölümünde yapımcı: **Ömer Faruk Boz**
 
-## Android Studio olmadan APK alma
-1. Bu ZIP'i açın ve içeriğini yeni bir GitHub reposuna yükleyin.
-2. GitHub'da **Actions** sekmesine girin.
-3. **Build APK** iş akışını açın ve **Run workflow** deyin.
-4. İşlem tamamlanınca sayfanın altındaki **Artifacts > GalaxyFinderShortcut-APK** dosyasını indirin.
-5. ZIP içindeki `app-debug.apk` dosyasını telefona kurun.
+## APK alma
+1. GitHub'da **Actions** sekmesine girin.
+2. **Mesai Takvimi APK** iş akışını açın.
+3. Tamamlanan çalışmanın altındaki **Artifacts** bölümünden **Mesai-Takvimi-APK** dosyasını indirin.
+4. ZIP içindeki `app-debug.apk` dosyasını telefona kurun.
 
 APK debug anahtarıyla imzalanır ve kişisel kullanım için kurulabilir.
