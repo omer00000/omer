@@ -16,3 +16,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Dongu"
 include(":app")
+
+// GitHub Actions build trigger
