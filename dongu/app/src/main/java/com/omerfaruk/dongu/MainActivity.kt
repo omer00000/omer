@@ -21,21 +21,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.weight
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -51,33 +37,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -139,9 +100,7 @@ data class DayEntry(
     val spotting: Boolean = false
 ) {
     val date: LocalDate get() = LocalDate.ofEpochDay(epochDay)
-
-    fun isEmpty(): Boolean =
-        !periodStart && !periodEnd && mood.isBlank() && note.isBlank() && pain == 0 && !spotting
+    fun isEmpty(): Boolean = !periodStart && !periodEnd && mood.isBlank() && note.isBlank() && pain == 0 && !spotting
 }
 
 data class Stats(
@@ -230,16 +189,11 @@ class CycleViewModel(application: Application) : AndroidViewModel(application) {
     )
     val state: StateFlow<UiState> = _state.asStateFlow()
 
-    init {
-        refresh(_state.value.entries)
-    }
+    init { refresh(_state.value.entries) }
 
     private fun refresh(entries: List<DayEntry>) {
         val stats = calculateStats(entries)
-        _state.value = _state.value.copy(
-            entries = entries.sortedBy { it.epochDay },
-            stats = stats
-        )
+        _state.value = _state.value.copy(entries = entries.sortedBy { it.epochDay }, stats = stats)
         if (_state.value.reminderEnabled) {
             ReminderScheduler.schedule(getApplication(), stats.nextPeriod, _state.value.reminderDays)
         } else {
@@ -252,7 +206,6 @@ class CycleViewModel(application: Application) : AndroidViewModel(application) {
         val index = entries.indexOfFirst { it.epochDay == date.toEpochDay() }
         val old = if (index >= 0) entries[index] else DayEntry(date.toEpochDay())
         val updated = transform(old)
-
         if (updated.isEmpty()) {
             if (index >= 0) entries.removeAt(index)
         } else if (index >= 0) {
@@ -260,28 +213,16 @@ class CycleViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             entries.add(updated)
         }
-
         store.saveEntries(entries)
         refresh(entries)
     }
 
-    fun togglePeriodStart(date: LocalDate) = mutate(date) {
-        it.copy(periodStart = !it.periodStart)
-    }
+    fun togglePeriodStart(date: LocalDate) = mutate(date) { it.copy(periodStart = !it.periodStart) }
+    fun togglePeriodEnd(date: LocalDate) = mutate(date) { it.copy(periodEnd = !it.periodEnd) }
 
-    fun togglePeriodEnd(date: LocalDate) = mutate(date) {
-        it.copy(periodEnd = !it.periodEnd)
+    fun saveDay(date: LocalDate, mood: String, note: String, pain: Int, spotting: Boolean) = mutate(date) {
+        it.copy(mood = mood, note = note.trim(), pain = pain.coerceIn(0, 5), spotting = spotting)
     }
-
-    fun saveDay(date: LocalDate, mood: String, note: String, pain: Int, spotting: Boolean) =
-        mutate(date) {
-            it.copy(
-                mood = mood,
-                note = note.trim(),
-                pain = pain.coerceIn(0, 5),
-                spotting = spotting
-            )
-        }
 
     fun setReminderEnabled(enabled: Boolean) {
         _state.value = _state.value.copy(reminderEnabled = enabled)
@@ -306,12 +247,9 @@ class MainActivity : ComponentActivity() {
                 val notificationPermission = rememberLauncherForActivityResult(
                     ActivityResultContracts.RequestPermission()
                 ) { }
-
                 DonguApp(
                     requestNotificationPermission = {
-                        if (
-                            Build.VERSION.SDK_INT >= 33 &&
-                            ContextCompat.checkSelfPermission(
+                        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(
                                 this,
                                 Manifest.permission.POST_NOTIFICATIONS
                             ) != PackageManager.PERMISSION_GRANTED
@@ -342,16 +280,9 @@ object ReminderScheduler {
     fun schedule(context: Context, nextPeriod: LocalDate?, daysBefore: Int) {
         cancel(context)
         if (nextPeriod == null) return
-
-        val target = nextPeriod
-            .minusDays(daysBefore.toLong())
-            .atTime(9, 0)
-            .atZone(ZoneId.systemDefault())
-
+        val target = nextPeriod.minusDays(daysBefore.toLong()).atTime(9, 0).atZone(ZoneId.systemDefault())
         if (!target.isAfter(ZonedDateTime.now())) return
-
-        val intent = Intent(context, PeriodReminderReceiver::class.java)
-            .putExtra("days", daysBefore)
+        val intent = Intent(context, PeriodReminderReceiver::class.java).putExtra("days", daysBefore)
         val pendingIntent = PendingIntent.getBroadcast(
             context,
             REQUEST_CODE,
@@ -359,11 +290,7 @@ object ReminderScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.setAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            target.toInstant().toEpochMilli(),
-            pendingIntent
-        )
+        alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, target.toInstant().toEpochMilli(), pendingIntent)
     }
 
     fun cancel(context: Context) {
@@ -401,10 +328,7 @@ class PeriodReminderReceiver : BroadcastReceiver() {
             .setContentIntent(openApp)
             .setAutoCancel(true)
             .build()
-
-        if (
-            Build.VERSION.SDK_INT < 33 ||
-            ContextCompat.checkSelfPermission(
+        if (Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
@@ -419,11 +343,7 @@ class BootReceiver : BroadcastReceiver() {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
         val store = Store(context)
         if (store.reminderEnabled()) {
-            ReminderScheduler.schedule(
-                context,
-                calculateStats(store.loadEntries()).nextPeriod,
-                store.reminderDays()
-            )
+            ReminderScheduler.schedule(context, calculateStats(store.loadEntries()).nextPeriod, store.reminderDays())
         }
     }
 }
@@ -471,12 +391,7 @@ private fun DonguApp(
                 onDateClick = { selectedDate = it },
                 onQuickStart = { viewModel.togglePeriodStart(LocalDate.now()) }
             )
-
-            AppTab.STATS -> StatsScreen(
-                state = state,
-                modifier = Modifier.padding(padding)
-            )
-
+            AppTab.STATS -> StatsScreen(state, Modifier.padding(padding))
             AppTab.SETTINGS -> SettingsScreen(
                 state = state,
                 modifier = Modifier.padding(padding),
@@ -514,9 +429,7 @@ private fun CalendarScreen(
 ) {
     var month by remember { mutableStateOf(YearMonth.now()) }
     val today = LocalDate.now()
-    val todayStarted = state.entries.any {
-        it.epochDay == today.toEpochDay() && it.periodStart
-    }
+    val todayStarted = state.entries.any { it.epochDay == today.toEpochDay() && it.periodStart }
 
     LazyColumn(
         modifier = modifier.fillMaxSize().statusBarsPadding(),
@@ -527,7 +440,6 @@ private fun CalendarScreen(
             Text("Döngü", fontSize = 30.sp, fontWeight = FontWeight.Bold)
             Text(periodHeadline(state.stats), color = Text2, fontSize = 13.sp)
         }
-
         item {
             Surface(
                 color = if (todayStarted) Soft else Pink,
@@ -535,10 +447,7 @@ private fun CalendarScreen(
                 shape = RoundedCornerShape(24.dp),
                 modifier = Modifier.fillMaxWidth().clickable(onClick = onQuickStart)
             ) {
-                Row(
-                    modifier = Modifier.padding(18.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.WaterDrop, contentDescription = null)
                     Spacer(Modifier.width(12.dp))
                     Column {
@@ -554,42 +463,21 @@ private fun CalendarScreen(
                 }
             }
         }
-
         item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = CardBg),
-                shape = RoundedCornerShape(28.dp)
-            ) {
+            Card(colors = CardDefaults.cardColors(containerColor = CardBg), shape = RoundedCornerShape(28.dp)) {
                 Column(Modifier.padding(12.dp)) {
-                    MonthHeader(
-                        month = month,
-                        previous = { month = month.minusMonths(1) },
-                        next = { month = month.plusMonths(1) }
-                    )
+                    MonthHeader(month, { month = month.minusMonths(1) }, { month = month.plusMonths(1) })
                     WeekHeader()
                     MonthGrid(month, today, state, onDateClick)
                     CalendarLegend()
                 }
             }
         }
-
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MetricCard(
-                    title = "Ort. döngü",
-                    value = state.stats.averageCycle?.let { "$it gün" } ?: "—",
-                    modifier = Modifier.weight(1f)
-                )
-                MetricCard(
-                    title = "Ort. regl",
-                    value = state.stats.averagePeriod?.let { "$it gün" } ?: "—",
-                    modifier = Modifier.weight(1f)
-                )
-                MetricCard(
-                    title = "Düzen",
-                    value = state.stats.regularity,
-                    modifier = Modifier.weight(1f)
-                )
+                MetricCard("Ort. döngü", state.stats.averageCycle?.let { "$it gün" } ?: "—", Modifier.weight(1f))
+                MetricCard("Ort. regl", state.stats.averagePeriod?.let { "$it gün" } ?: "—", Modifier.weight(1f))
+                MetricCard("Düzen", state.stats.regularity, Modifier.weight(1f))
             }
         }
     }
@@ -598,27 +486,17 @@ private fun CalendarScreen(
 @Composable
 private fun MonthHeader(month: YearMonth, previous: () -> Unit, next: () -> Unit) {
     val tr = Locale("tr", "TR")
-    val monthName = month.month
-        .getDisplayName(TextStyle.FULL, tr)
-        .replaceFirstChar { it.titlecase(tr) }
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = previous) {
-            Icon(Icons.Default.ChevronLeft, contentDescription = "Önceki ay")
-        }
+    val monthName = month.month.getDisplayName(TextStyle.FULL, tr).replaceFirstChar { it.titlecase(tr) }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = previous) { Icon(Icons.Default.ChevronLeft, contentDescription = "Önceki ay") }
         Text(
-            text = "$monthName ${month.year}",
-            modifier = Modifier.weight(1f),
+            "$monthName ${month.year}",
+            Modifier.weight(1f),
             textAlign = TextAlign.Center,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold
         )
-        IconButton(onClick = next) {
-            Icon(Icons.Default.ChevronRight, contentDescription = "Sonraki ay")
-        }
+        IconButton(onClick = next) { Icon(Icons.Default.ChevronRight, contentDescription = "Sonraki ay") }
     }
 }
 
@@ -626,27 +504,18 @@ private fun MonthHeader(month: YearMonth, previous: () -> Unit, next: () -> Unit
 private fun WeekHeader() {
     Row(Modifier.fillMaxWidth()) {
         listOf("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz").forEach { day ->
-            Text(
-                text = day,
-                modifier = Modifier.weight(1f).padding(vertical = 6.dp),
-                textAlign = TextAlign.Center,
-                fontSize = 10.sp,
-                color = Text2
-            )
+            Text(day, Modifier.weight(1f).padding(vertical = 6.dp), textAlign = TextAlign.Center, fontSize = 10.sp, color = Text2)
         }
     }
 }
 
 @Composable
-private fun MonthGrid(
-    month: YearMonth,
-    today: LocalDate,
-    state: UiState,
-    onDateClick: (LocalDate) -> Unit
-) {
+private fun MonthGrid(month: YearMonth, today: LocalDate, state: UiState, onDateClick: (LocalDate) -> Unit) {
     val offset = month.atDay(1).dayOfWeek.value - 1
     val entryMap = state.entries.associateBy { it.epochDay }
     val actualPeriods = periodIntervals(state.entries)
+    val fertileStart = state.stats.fertileStart
+    val fertileEnd = state.stats.fertileEnd
 
     Column {
         repeat(6) { row ->
@@ -658,26 +527,20 @@ private fun MonthGrid(
                     } else {
                         val date = month.atDay(dayNumber)
                         val entry = entryMap[date.toEpochDay()]
-                        val actual = actualPeriods.any {
-                            !date.isBefore(it.start) && !date.isAfter(it.end)
-                        }
+                        val actual = actualPeriods.any { !date.isBefore(it.start) && !date.isAfter(it.end) }
                         val predicted = isPredictedPeriod(date, state.stats)
-                        val fertile = state.stats.fertileStart != null &&
-                            state.stats.fertileEnd != null &&
-                            !date.isBefore(state.stats.fertileStart) &&
-                            !date.isAfter(state.stats.fertileEnd)
-
+                        val fertile = fertileStart != null && fertileEnd != null &&
+                            !date.isBefore(fertileStart) && !date.isAfter(fertileEnd)
                         CalendarCell(
-                            date = date,
-                            entry = entry,
-                            isToday = date == today,
-                            actualPeriod = actual,
-                            predictedPeriod = predicted,
-                            fertile = fertile,
-                            ovulation = date == state.stats.ovulation,
-                            modifier = Modifier.weight(1f),
-                            onClick = { onDateClick(date) }
-                        )
+                            date,
+                            entry,
+                            date == today,
+                            actual,
+                            predicted,
+                            fertile,
+                            date == state.stats.ovulation,
+                            Modifier.weight(1f)
+                        ) { onDateClick(date) }
                     }
                 }
             }
@@ -709,38 +572,18 @@ private fun CalendarCell(
         fertile -> Lavender.copy(alpha = 0.4f)
         else -> Color.Transparent
     }
-
     Box(
-        modifier = modifier
-            .height(62.dp)
-            .padding(2.dp)
-            .clip(RoundedCornerShape(15.dp))
-            .background(background)
-            .border(1.dp, border, RoundedCornerShape(15.dp))
-            .clickable(onClick = onClick)
+        modifier.height(62.dp).padding(2.dp).clip(RoundedCornerShape(15.dp))
+            .background(background).border(1.dp, border, RoundedCornerShape(15.dp)).clickable(onClick = onClick)
     ) {
         if (!entry?.note.isNullOrBlank()) {
-            Box(
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(7.dp)
-                    .size(5.dp)
-                    .background(Pink, CircleShape)
-            )
+            Box(Modifier.align(Alignment.TopEnd).padding(7.dp).size(5.dp).background(Pink, CircleShape))
         }
-
-        Column(
-            modifier = Modifier.align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = date.dayOfMonth.toString(),
+                date.dayOfMonth.toString(),
                 fontSize = 13.sp,
-                fontWeight = if (isToday || entry?.periodStart == true) {
-                    FontWeight.Bold
-                } else {
-                    FontWeight.Medium
-                },
+                fontWeight = if (isToday || entry?.periodStart == true) FontWeight.Bold else FontWeight.Medium,
                 color = if (actualPeriod) Color(0xFF321421) else Color.White
             )
             Spacer(Modifier.height(3.dp))
@@ -755,10 +598,7 @@ private fun CalendarCell(
 
 @Composable
 private fun CalendarLegend() {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        horizontalArrangement = Arrangement.SpaceAround
-    ) {
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceAround) {
         LegendDot(PinkStrong, "Regl")
         LegendDot(Pink.copy(alpha = 0.35f), "Tahmin")
         LegendDot(Lavender.copy(alpha = 0.45f), "Doğurgan")
@@ -781,11 +621,7 @@ private fun LegendDot(color: Color, text: String) {
 
 @Composable
 private fun MetricCard(title: String, value: String, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = CardBg),
-        shape = RoundedCornerShape(20.dp)
-    ) {
+    Card(modifier, colors = CardDefaults.cardColors(containerColor = CardBg), shape = RoundedCornerShape(20.dp)) {
         Column(Modifier.padding(13.dp)) {
             Text(title, color = Text2, fontSize = 10.sp)
             Text(value, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
@@ -807,55 +643,34 @@ private fun DaySheet(
     var note by remember(date, entry?.note) { mutableStateOf(entry?.note.orEmpty()) }
     var pain by remember(date, entry?.pain) { mutableIntStateOf(entry?.pain ?: 0) }
     var spotting by remember(date, entry?.spotting) { mutableStateOf(entry?.spotting ?: false) }
-    var symptomsExpanded by remember {
-        mutableStateOf((entry?.pain ?: 0) > 0 || entry?.spotting == true)
-    }
+    var symptomsExpanded by remember { mutableStateOf((entry?.pain ?: 0) > 0 || entry?.spotting == true) }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = CardBg
-    ) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = CardBg) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.9f)
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp)
+            Modifier.fillMaxWidth().fillMaxHeight(0.9f).verticalScroll(rememberScrollState()).padding(20.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(longDate(date), fontWeight = FontWeight.Bold, fontSize = 21.sp)
                     Text("Gün detayları", color = Text2, fontSize = 12.sp)
                 }
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = "Kapat")
-                }
+                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "Kapat") }
             }
-
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = onToggleStart,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = Pink)
-                ) {
-                    Text(if (entry?.periodStart == true) "Başlangıç ✓" else "Regl başladı")
-                }
-                OutlinedButton(
-                    onClick = onToggleEnd,
-                    modifier = Modifier.weight(1f)
-                ) {
+                ) { Text(if (entry?.periodStart == true) "Başlangıç ✓" else "Regl başladı") }
+                OutlinedButton(onClick = onToggleEnd, modifier = Modifier.weight(1f)) {
                     Text(if (entry?.periodEnd == true) "Bitiş ✓" else "Regl bitti")
                 }
             }
-
             Spacer(Modifier.height(22.dp))
             Text("Duygu durumu", fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(8.dp))
-            MoodPicker(selected = mood) { selected ->
-                mood = if (mood == selected) "" else selected
-            }
-
+            MoodPicker(mood) { selected -> mood = if (mood == selected) "" else selected }
             Spacer(Modifier.height(18.dp))
             Text("Not", fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(7.dp))
@@ -868,25 +683,17 @@ private fun DaySheet(
                 placeholder = { Text("Bugün nasıl geçti?") },
                 shape = RoundedCornerShape(18.dp)
             )
-
             Spacer(Modifier.height(14.dp))
             Surface(
                 color = Soft,
                 shape = RoundedCornerShape(18.dp),
-                modifier = Modifier.fillMaxWidth().clickable {
-                    symptomsExpanded = !symptomsExpanded
-                }
+                modifier = Modifier.fillMaxWidth().clickable { symptomsExpanded = !symptomsExpanded }
             ) {
                 Row(Modifier.padding(16.dp)) {
                     Text("Semptomlar", Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
-                    Text(
-                        if (symptomsExpanded) "Gizle" else "Göster",
-                        color = Pink,
-                        fontSize = 12.sp
-                    )
+                    Text(if (symptomsExpanded) "Gizle" else "Göster", color = Pink, fontSize = 12.sp)
                 }
             }
-
             AnimatedVisibility(visible = symptomsExpanded) {
                 Column(Modifier.padding(top = 12.dp)) {
                     Row {
@@ -906,15 +713,12 @@ private fun DaySheet(
                     )
                 }
             }
-
             Spacer(Modifier.height(22.dp))
             Button(
                 onClick = { onSave(mood, note, pain, spotting) },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(18.dp)
-            ) {
-                Text("Kaydet", fontWeight = FontWeight.Bold)
-            }
+            ) { Text("Kaydet", fontWeight = FontWeight.Bold) }
             Spacer(Modifier.height(20.dp))
         }
     }
@@ -925,30 +729,17 @@ private fun MoodPicker(selected: String, onSelect: (String) -> Unit) {
     val moods = listOf("🙂", "😌", "🥰", "😐", "😔", "😣", "😡", "😴")
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         moods.chunked(4).forEach { rowMoods ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(7.dp)
-            ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 rowMoods.forEach { mood ->
                     val active = mood == selected
                     Surface(
                         color = if (active) Pink.copy(alpha = 0.22f) else Soft,
                         shape = RoundedCornerShape(17.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp)
-                            .clickable { onSelect(mood) }
-                            .then(
-                                if (active) {
-                                    Modifier.border(1.dp, Pink, RoundedCornerShape(17.dp))
-                                } else {
-                                    Modifier
-                                }
-                            )
+                        modifier = Modifier.weight(1f).height(50.dp).clickable { onSelect(mood) }.then(
+                            if (active) Modifier.border(1.dp, Pink, RoundedCornerShape(17.dp)) else Modifier
+                        )
                     ) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(mood, fontSize = 23.sp)
-                        }
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(mood, fontSize = 23.sp) }
                     }
                 }
             }
@@ -960,7 +751,6 @@ private fun MoodPicker(selected: String, onSelect: (String) -> Unit) {
 private fun StatsScreen(state: UiState, modifier: Modifier) {
     val stats = state.stats
     val history = periodHistory(state.entries)
-
     LazyColumn(
         modifier = modifier.fillMaxSize().statusBarsPadding(),
         contentPadding = PaddingValues(18.dp),
@@ -970,85 +760,44 @@ private fun StatsScreen(state: UiState, modifier: Modifier) {
             Text("Analiz", fontSize = 30.sp, fontWeight = FontWeight.Bold)
             Text("Kayıtların arttıkça tahminler kişiselleşir.", color = Text2, fontSize = 12.sp)
         }
-
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MetricCard(
-                    "Ortalama döngü",
-                    stats.averageCycle?.let { "$it gün" } ?: "Veri yok",
-                    Modifier.weight(1f)
-                )
-                MetricCard(
-                    "Ortalama regl",
-                    stats.averagePeriod?.let { "$it gün" } ?: "Veri yok",
-                    Modifier.weight(1f)
-                )
+                MetricCard("Ortalama döngü", stats.averageCycle?.let { "$it gün" } ?: "Veri yok", Modifier.weight(1f))
+                MetricCard("Ortalama regl", stats.averagePeriod?.let { "$it gün" } ?: "Veri yok", Modifier.weight(1f))
             }
         }
-
         stats.nextPeriod?.let { nextPeriod ->
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Pink.copy(alpha = 0.12f)),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
+                Card(colors = CardDefaults.cardColors(containerColor = Pink.copy(alpha = 0.12f)), shape = RoundedCornerShape(24.dp)) {
                     Column(Modifier.padding(18.dp)) {
                         Text("Tahmin", color = Pink, fontWeight = FontWeight.Bold)
-                        Text(
-                            "Sonraki regl: ${shortDate(nextPeriod)}",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 19.sp
-                        )
+                        Text("Sonraki regl: ${shortDate(nextPeriod)}", fontWeight = FontWeight.Bold, fontSize = 19.sp)
                         stats.ovulation?.let {
-                            Text(
-                                "Ovülasyon: ${shortDate(it)}",
-                                color = Text2,
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(top = 7.dp)
-                            )
+                            Text("Ovülasyon: ${shortDate(it)}", color = Text2, fontSize = 13.sp, modifier = Modifier.padding(top = 7.dp))
                         }
-                        if (stats.fertileStart != null && stats.fertileEnd != null) {
-                            Text(
-                                "Doğurganlık: ${shortDate(stats.fertileStart)} – ${shortDate(stats.fertileEnd)}",
-                                color = Text2,
-                                fontSize = 13.sp
-                            )
+                        val fertileStart = stats.fertileStart
+                        val fertileEnd = stats.fertileEnd
+                        if (fertileStart != null && fertileEnd != null) {
+                            Text("Doğurganlık: ${shortDate(fertileStart)} – ${shortDate(fertileEnd)}", color = Text2, fontSize = 13.sp)
                         }
                     }
                 }
             }
         }
-
         item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = CardBg),
-                shape = RoundedCornerShape(24.dp)
-            ) {
+            Card(colors = CardDefaults.cardColors(containerColor = CardBg), shape = RoundedCornerShape(24.dp)) {
                 Column(Modifier.padding(18.dp)) {
                     Text("Döngü düzeni", fontWeight = FontWeight.Bold)
-                    Text(
-                        stats.regularity,
-                        color = Pink,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(top = 5.dp)
-                    )
+                    Text(stats.regularity, color = Pink, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 5.dp))
                     stats.deviation?.let {
-                        Text(
-                            "Standart sapma: ${"%.1f".format(Locale.US, it)} gün",
-                            color = Text2,
-                            fontSize = 12.sp
-                        )
+                        Text("Standart sapma: ${"%.1f".format(Locale.US, it)} gün", color = Text2, fontSize = 12.sp)
                     }
                 }
             }
         }
-
         if (stats.cycleLengths.isNotEmpty()) {
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = CardBg),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
+                Card(colors = CardDefaults.cardColors(containerColor = CardBg), shape = RoundedCornerShape(24.dp)) {
                     Column(Modifier.padding(18.dp)) {
                         Text("Geçmiş döngüler", fontWeight = FontWeight.Bold)
                         Text("Başlangıçlar arasındaki gün sayısı", color = Text2, fontSize = 12.sp)
@@ -1058,25 +807,13 @@ private fun StatsScreen(state: UiState, modifier: Modifier) {
                 }
             }
         }
-
         if (history.isNotEmpty()) {
-            item {
-                Text("Regl geçmişi", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            }
-            items(history) { item ->
-                HistoryRow(item.first, item.second)
-            }
+            item { Text("Regl geçmişi", fontWeight = FontWeight.Bold, fontSize = 18.sp) }
+            items(history) { item -> HistoryRow(item.first, item.second) }
         } else {
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = CardBg),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Text(
-                        "En az iki başlangıç kaydıyla analiz oluşmaya başlar.",
-                        modifier = Modifier.padding(20.dp),
-                        color = Text2
-                    )
+                Card(colors = CardDefaults.cardColors(containerColor = CardBg), shape = RoundedCornerShape(24.dp)) {
+                    Text("En az iki başlangıç kaydıyla analiz oluşmaya başlar.", Modifier.padding(20.dp), color = Text2)
                 }
             }
         }
@@ -1088,73 +825,41 @@ private fun CycleChart(values: List<Int>) {
     val min = values.minOrNull() ?: 0
     val max = values.maxOrNull() ?: 1
     val range = (max - min).coerceAtLeast(1)
-
     Canvas(
-        Modifier
-            .fillMaxWidth()
-            .height(145.dp)
-            .background(Soft, RoundedCornerShape(18.dp))
-            .padding(14.dp)
+        Modifier.fillMaxWidth().height(145.dp).background(Soft, RoundedCornerShape(18.dp)).padding(14.dp)
     ) {
         val step = if (values.size == 1) 0f else size.width / (values.size - 1)
         val points = values.mapIndexed { index, value ->
             Offset(
                 x = if (values.size == 1) size.width / 2 else index * step,
-                y = size.height - (
-                    ((value - min).toFloat() / range) * size.height * 0.72f + size.height * 0.14f
-                )
+                y = size.height - (((value - min).toFloat() / range) * size.height * 0.72f + size.height * 0.14f)
             )
         }
-
         for (i in 0 until points.lastIndex) {
-            drawLine(
-                color = Pink,
-                start = points[i],
-                end = points[i + 1],
-                strokeWidth = 5f,
-                cap = StrokeCap.Round
-            )
+            drawLine(Pink, points[i], points[i + 1], strokeWidth = 5f, cap = StrokeCap.Round)
         }
         points.forEach { point ->
             drawCircle(Pink, radius = 7f, center = point)
             drawCircle(Soft, radius = 3f, center = point)
         }
     }
-
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
+    Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         values.forEach { Text("$it", fontSize = 10.sp, color = Text2) }
     }
 }
 
 @Composable
 private fun HistoryRow(start: LocalDate, end: LocalDate?) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = CardBg),
-        shape = RoundedCornerShape(20.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(15.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    Card(colors = CardDefaults.cardColors(containerColor = CardBg), shape = RoundedCornerShape(20.dp)) {
+        Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.WaterDrop, contentDescription = null, tint = Pink)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(shortDate(start), fontWeight = FontWeight.SemiBold)
-                Text(
-                    if (end != null) "Bitiş: ${shortDate(end)}" else "Bitiş kaydı yok",
-                    color = Text2,
-                    fontSize = 12.sp
-                )
+                Text(if (end != null) "Bitiş: ${shortDate(end)}" else "Bitiş kaydı yok", color = Text2, fontSize = 12.sp)
             }
             if (end != null) {
-                Text(
-                    "${ChronoUnit.DAYS.between(start, end) + 1} gün",
-                    color = Pink,
-                    fontWeight = FontWeight.Bold
-                )
+                Text("${ChronoUnit.DAYS.between(start, end) + 1} gün", color = Pink, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -1168,20 +873,12 @@ private fun SettingsScreen(
     onReminderDaysChanged: (Int) -> Unit
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(18.dp)
+        modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(18.dp)
     ) {
         Text("Ayarlar", fontSize = 30.sp, fontWeight = FontWeight.Bold)
         Text("Sade, yerel ve özel.", color = Text2, fontSize = 12.sp)
         Spacer(Modifier.height(18.dp))
-
-        Card(
-            colors = CardDefaults.cardColors(containerColor = CardBg),
-            shape = RoundedCornerShape(24.dp)
-        ) {
+        Card(colors = CardDefaults.cardColors(containerColor = CardBg), shape = RoundedCornerShape(24.dp)) {
             Column(Modifier.padding(18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Notifications, contentDescription = null, tint = Pink)
@@ -1190,21 +887,13 @@ private fun SettingsScreen(
                         Text("Regl hatırlatıcısı", fontWeight = FontWeight.Bold)
                         Text("Tahmini tarihten önce bildirim", color = Text2, fontSize = 12.sp)
                     }
-                    Switch(
-                        checked = state.reminderEnabled,
-                        onCheckedChange = onReminderChanged
-                    )
+                    Switch(checked = state.reminderEnabled, onCheckedChange = onReminderChanged)
                 }
-
                 AnimatedVisibility(visible = state.reminderEnabled) {
                     Column(Modifier.padding(top = 14.dp)) {
                         Row {
                             Text("Kaç gün önce?", Modifier.weight(1f))
-                            Text(
-                                if (state.reminderDays == 0) "Aynı gün" else "${state.reminderDays} gün",
-                                color = Pink,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Text(if (state.reminderDays == 0) "Aynı gün" else "${state.reminderDays} gün", color = Pink, fontWeight = FontWeight.Bold)
                         }
                         Slider(
                             value = state.reminderDays.toFloat(),
@@ -1216,106 +905,68 @@ private fun SettingsScreen(
                 }
             }
         }
-
         Spacer(Modifier.height(13.dp))
-        InfoCard(
-            "Gizlilik",
-            "Tüm kayıtlar yalnızca bu cihazda tutulur. Uygulama hesap, internet veya bulut bağlantısı istemez."
-        )
+        InfoCard("Gizlilik", "Tüm kayıtlar yalnızca bu cihazda tutulur. Uygulama hesap, internet veya bulut bağlantısı istemez.")
         Spacer(Modifier.height(13.dp))
         InfoCard(
             "Tahminler hakkında",
             "Regl, ovülasyon ve doğurganlık tarihleri geçmiş kayıtların ortalamasına dayalı yaklaşık tahminlerdir. Tıbbi değerlendirme veya doğum kontrol yöntemi olarak kullanılmamalıdır."
         )
         Spacer(Modifier.height(18.dp))
-        Text(
-            "Döngü 1.0.0",
-            color = Text2,
-            fontSize = 11.sp,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
+        Text("Döngü 1.0.0", color = Text2, fontSize = 11.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
     }
 }
 
 @Composable
 private fun InfoCard(title: String, body: String) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = CardBg),
-        shape = RoundedCornerShape(24.dp)
-    ) {
+    Card(colors = CardDefaults.cardColors(containerColor = CardBg), shape = RoundedCornerShape(24.dp)) {
         Column(Modifier.padding(18.dp)) {
             Text(title, fontWeight = FontWeight.Bold)
-            Text(
-                body,
-                color = Text2,
-                fontSize = 13.sp,
-                lineHeight = 19.sp,
-                modifier = Modifier.padding(top = 7.dp)
-            )
+            Text(body, color = Text2, fontSize = 13.sp, lineHeight = 19.sp, modifier = Modifier.padding(top = 7.dp))
         }
     }
 }
 
 private fun calculateStats(entries: List<DayEntry>): Stats {
-    val starts = entries
-        .filter { it.periodStart }
-        .map { it.date }
-        .distinct()
-        .sorted()
-
-    val cycleLengths = starts
-        .zipWithNext { a, b -> ChronoUnit.DAYS.between(a, b).toInt() }
-        .filter { it > 0 }
-
+    val starts = entries.filter { it.periodStart }.map { it.date }.distinct().sorted()
+    val cycleLengths = starts.zipWithNext { a, b -> ChronoUnit.DAYS.between(a, b).toInt() }.filter { it > 0 }
     val periodDurations = completedPeriodDurations(entries)
     val averageCycle = cycleLengths.takeIf { it.isNotEmpty() }?.average()?.roundToInt()
     val averagePeriod = periodDurations.takeIf { it.isNotEmpty() }?.average()?.roundToInt()
-
     val deviation = if (cycleLengths.size >= 2) {
         val average = cycleLengths.average()
         sqrt(cycleLengths.sumOf { (it - average) * (it - average) } / cycleLengths.size)
-    } else {
-        null
-    }
-
+    } else null
     val regularity = when {
         cycleLengths.size < 2 -> "Veri bekleniyor"
         deviation != null && deviation <= 2.0 -> "Düzenli"
         deviation != null && deviation <= 5.0 -> "Değişken"
         else -> "Düzensiz"
     }
-
     val cycle = averageCycle ?: 28
     var next = starts.lastOrNull()?.plusDays(cycle.toLong())
-    while (next != null && !next.isAfter(LocalDate.now())) {
-        next = next.plusDays(cycle.toLong())
-    }
-
+    while (next != null && !next.isAfter(LocalDate.now())) next = next.plusDays(cycle.toLong())
     val ovulation = next?.minusDays(14)
     return Stats(
-        averageCycle = averageCycle,
-        averagePeriod = averagePeriod,
-        cycleLengths = cycleLengths,
-        nextPeriod = next,
-        ovulation = ovulation,
-        fertileStart = ovulation?.minusDays(5),
-        fertileEnd = ovulation?.plusDays(1),
-        regularity = regularity,
-        deviation = deviation
+        averageCycle,
+        averagePeriod,
+        cycleLengths,
+        next,
+        ovulation,
+        ovulation?.minusDays(5),
+        ovulation?.plusDays(1),
+        regularity,
+        deviation
     )
 }
 
 private fun completedPeriodDurations(entries: List<DayEntry>): List<Int> {
     val starts = entries.filter { it.periodStart }.map { it.date }.distinct().sorted()
     val ends = entries.filter { it.periodEnd }.map { it.date }.distinct().sorted()
-
     return starts.mapIndexedNotNull { index, start ->
         val nextStart = starts.getOrNull(index + 1)
-        ends.firstOrNull { end ->
-            !end.isBefore(start) && (nextStart == null || end.isBefore(nextStart))
-        }?.let { end ->
-            (ChronoUnit.DAYS.between(start, end).toInt() + 1).takeIf { it in 1..15 }
-        }
+        ends.firstOrNull { end -> !end.isBefore(start) && (nextStart == null || end.isBefore(nextStart)) }
+            ?.let { end -> (ChronoUnit.DAYS.between(start, end).toInt() + 1).takeIf { it in 1..15 } }
     }
 }
 
@@ -1323,12 +974,9 @@ private fun periodIntervals(entries: List<DayEntry>): List<PeriodInterval> {
     val starts = entries.filter { it.periodStart }.map { it.date }.distinct().sorted()
     val ends = entries.filter { it.periodEnd }.map { it.date }.distinct().sorted()
     val today = LocalDate.now()
-
     return starts.mapIndexed { index, start ->
         val nextStart = starts.getOrNull(index + 1)
-        val recordedEnd = ends.firstOrNull { end ->
-            !end.isBefore(start) && (nextStart == null || end.isBefore(nextStart))
-        }
+        val recordedEnd = ends.firstOrNull { end -> !end.isBefore(start) && (nextStart == null || end.isBefore(nextStart)) }
         val displayEnd = recordedEnd ?: when {
             start.isAfter(today) -> start
             ChronoUnit.DAYS.between(start, today) <= 9 -> today
@@ -1341,12 +989,9 @@ private fun periodIntervals(entries: List<DayEntry>): List<PeriodInterval> {
 private fun periodHistory(entries: List<DayEntry>): List<Pair<LocalDate, LocalDate?>> {
     val starts = entries.filter { it.periodStart }.map { it.date }.distinct().sorted()
     val ends = entries.filter { it.periodEnd }.map { it.date }.distinct().sorted()
-
     return starts.mapIndexed { index, start ->
         val nextStart = starts.getOrNull(index + 1)
-        val end = ends.firstOrNull {
-            !it.isBefore(start) && (nextStart == null || it.isBefore(nextStart))
-        }
+        val end = ends.firstOrNull { !it.isBefore(start) && (nextStart == null || it.isBefore(nextStart)) }
         start to end
     }.reversed()
 }
