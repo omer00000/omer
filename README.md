@@ -1,20 +1,26 @@
 # Mesai Takvimi
 
-Android için basit, çevrimdışı mesai takip uygulaması.
+Android için basit ve çevrimdışı mesai takip uygulaması.
 
 ## Özellikler
+
 - Aylık takvim görünümü
-- Her güne dokunarak mesai saati ekleme / değiştirme / silme
-- Girilen mesai saatini gün kutusunda gösterme
-- Seçili ayın toplam mesai saatini otomatik hesaplama
-- Önceki ve sonraki aylara geçiş
-- Kayıtları cihazda yerel olarak saklama
-- Ayarlar bölümünde yapımcı: **Ömer Faruk Boz**
+- Bir güne dokunarak o günün mesai saatini ekleme veya silme
+- Girilen mesaiyi doğrudan gün hücresinde gösterme
+- Aylık toplam mesai saatini otomatik hesaplama
+- Sağa/sola kaydırarak ay değiştirme
+- Koyu ve sade arayüz
+- Verileri telefonun yerel hafızasında saklama
+- Ayarlar ekranında yapımcı: **Ömer Faruk Boz**
 
-## APK alma
-1. GitHub'da **Actions** sekmesine girin.
-2. **Mesai Takvimi APK** iş akışını açın.
-3. Tamamlanan çalışmanın altındaki **Artifacts** bölümünden **Mesai-Takvimi-APK** dosyasını indirin.
-4. ZIP içindeki `app-debug.apk` dosyasını telefona kurun.
+## APK indirme
 
-APK debug anahtarıyla imzalanır ve kişisel kullanım için kurulabilir.
+GitHub sayfasında **Actions > Mesai Takvimi APK** bölümünü açın. En son başarılı çalışmayı seçip **Mesai-Takvimi-APK** adlı artifact dosyasını indirin. ZIP içindeki `Mesai-Takvimi.apk` dosyası telefona kurulabilir.
+
+## Paket
+
+`com.omerfaruk.mesaitakvimi`
+
+## Sürüm
+
+1.1
