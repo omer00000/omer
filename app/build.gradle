@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'com.openai.galaxyfindershortcut'
+    namespace 'com.omerfaruk.mesaitakvimi'
     compileSdk 35
 
     defaultConfig {
-        applicationId 'com.openai.galaxyfindershortcut'
+        applicationId 'com.omerfaruk.mesaitakvimi'
         minSdk 23
         targetSdk 35
         versionCode 1
