@@ -128,18 +128,21 @@ public class MainActivity extends Activity {
 
         LinearLayout titleGroup = new LinearLayout(this);
         titleGroup.setOrientation(LinearLayout.VERTICAL);
+        titleGroup.setGravity(Gravity.START);
         top.addView(titleGroup, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         DotMatrixTextView appTitle = new DotMatrixTextView(this);
         appTitle.setText(normalizeDotsText("Mesai Takvimi"));
         appTitle.setDotColor(TEXT);
-        appTitle.setMatrixMetrics(dpFloat(3.2f), dpFloat(2.5f), dpFloat(7f));
+        appTitle.setMatrixMetrics(dpFloat(2.6f), dpFloat(2.0f), dpFloat(5.6f));
+        appTitle.setGravity(Gravity.START);
         titleGroup.addView(appTitle);
 
         TextView subtitle = new TextView(this);
         subtitle.setText("Aylık mesai kaydı");
         subtitle.setTextColor(TEXT_MUTED);
-        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        subtitle.setGravity(Gravity.START);
         subtitle.setPadding(0, dp(2), 0, 0);
         titleGroup.addView(subtitle);
 
@@ -152,7 +155,7 @@ public class MainActivity extends Activity {
         LinearLayout nav = new LinearLayout(this);
         nav.setOrientation(LinearLayout.HORIZONTAL);
         nav.setGravity(Gravity.CENTER_VERTICAL);
-        nav.setPadding(0, dp(24), 0, dp(16));
+        nav.setPadding(0, dp(18), 0, dp(12));
 
         TextView prev = navButton("‹");
         prev.setContentDescription("Önceki ay");
@@ -161,11 +164,11 @@ public class MainActivity extends Activity {
 
         monthTitle = new DotMatrixTextView(this);
         monthTitle.setDotColor(TEXT);
-        monthTitle.setMatrixMetrics(dpFloat(3.0f), dpFloat(2.3f), dpFloat(6.5f));
-        monthTitle.setGravity(Gravity.CENTER);
+        monthTitle.setMatrixMetrics(dpFloat(2.35f), dpFloat(1.85f), dpFloat(5.2f));
+        monthTitle.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         LinearLayout.LayoutParams monthLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        monthLp.leftMargin = dp(10);
-        monthLp.rightMargin = dp(10);
+        monthLp.leftMargin = dp(8);
+        monthLp.rightMargin = dp(8);
         nav.addView(monthTitle, monthLp);
 
         TextView next = navButton("›");
@@ -178,9 +181,9 @@ public class MainActivity extends Activity {
         totalText = new TextView(this);
         totalText.setGravity(Gravity.CENTER_VERTICAL);
         totalText.setTextColor(TEXT);
-        totalText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        totalText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         totalText.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        totalText.setPadding(dp(16), dp(14), dp(16), dp(14));
+        totalText.setPadding(dp(14), dp(12), dp(14), dp(12));
         totalText.setBackground(rounded(SURFACE_ALT, STROKE, 18, 1));
         root.addView(totalText, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -191,16 +194,16 @@ public class MainActivity extends Activity {
 
         LinearLayout weekHeader = new LinearLayout(this);
         weekHeader.setOrientation(LinearLayout.HORIZONTAL);
-        weekHeader.setPadding(0, dp(18), 0, dp(8));
+        weekHeader.setPadding(0, dp(14), 0, dp(6));
         String[] dayNames = {"Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"};
         for (String name : dayNames) {
             TextView day = new TextView(this);
             day.setText(name);
             day.setGravity(Gravity.CENTER);
             day.setTextColor(TEXT_MUTED);
-            day.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            day.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
             day.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-            weekHeader.addView(day, new LinearLayout.LayoutParams(0, dp(34), 1f));
+            weekHeader.addView(day, new LinearLayout.LayoutParams(0, dp(30), 1f));
         }
         calendarSection.addView(weekHeader);
 
@@ -265,7 +268,7 @@ public class MainActivity extends Activity {
     private void addBlankCell() {
         View blank = new View(this);
         GridLayout.LayoutParams lp = cellParams();
-        lp.setMargins(dp(3), dp(3), dp(3), dp(3));
+        lp.setMargins(dp(2), dp(2), dp(2), dp(2));
         blank.setLayoutParams(lp);
         blank.setBackground(rounded(Color.parseColor("#050505"), Color.parseColor("#171717"), 18, 1));
         calendarGrid.addView(blank);
@@ -278,17 +281,17 @@ public class MainActivity extends Activity {
         LinearLayout cell = new LinearLayout(this);
         cell.setOrientation(LinearLayout.VERTICAL);
         cell.setGravity(Gravity.CENTER);
-        cell.setPadding(dp(3), dp(7), dp(3), dp(7));
+        cell.setPadding(dp(3), dp(5), dp(3), dp(5));
 
         int fill = hasHours ? ACCENT_SOFT : SURFACE;
         int border = today ? ACCENT : STROKE;
         int borderWidth = today ? 2 : 1;
-        cell.setBackground(rounded(fill, border, 18, borderWidth));
+        cell.setBackground(rounded(fill, border, 16, borderWidth));
         cell.setElevation(dp(1));
 
         TextView dayNo = new TextView(this);
         dayNo.setText(String.valueOf(day));
-        dayNo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        dayNo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         dayNo.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         dayNo.setTextColor(TEXT);
         dayNo.setGravity(Gravity.CENTER);
@@ -296,17 +299,17 @@ public class MainActivity extends Activity {
 
         TextView hourText = new TextView(this);
         hourText.setText(hasHours ? formatDayMinutes(minutes) : "");
-        hourText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        hourText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         hourText.setTextColor(hasHours ? TEXT : TEXT_MUTED);
         hourText.setTypeface(Typeface.DEFAULT, Typeface.NORMAL);
         hourText.setGravity(Gravity.CENTER);
-        hourText.setPadding(0, dp(6), 0, 0);
+        hourText.setPadding(0, dp(4), 0, 0);
         cell.addView(hourText);
 
         cell.setOnClickListener(v -> showTimePicker(day, key, minutes));
 
         GridLayout.LayoutParams lp = cellParams();
-        lp.setMargins(dp(3), dp(3), dp(3), dp(3));
+        lp.setMargins(dp(2), dp(2), dp(2), dp(2));
         cell.setLayoutParams(lp);
         calendarGrid.addView(cell);
     }
@@ -314,7 +317,7 @@ public class MainActivity extends Activity {
     private GridLayout.LayoutParams cellParams() {
         GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
         lp.width = 0;
-        lp.height = dp(72);
+        lp.height = dp(64);
         lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
         return lp;
     }
@@ -412,7 +415,7 @@ public class MainActivity extends Activity {
     private void showAbout() {
         new AlertDialog.Builder(this)
                 .setTitle("Mesai Takvimi")
-                .setMessage("Yapımcı: Ömer Faruk Boz\nSürüm: 1.4\n\nVeriler yalnızca telefonda saklanır. Yedekleme ile JSON dosyası olarak dışa ve içe aktarılabilir.")
+                .setMessage("Yapımcı: Ömer Faruk Boz\nSürüm: 1.5\n\nVeriler yalnızca telefonda saklanır. Yedekleme ile JSON dosyası olarak dışa ve içe aktarılabilir.")
                 .setPositiveButton("Tamam", null)
                 .show();
     }
@@ -592,7 +595,7 @@ public class MainActivity extends Activity {
         view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
         view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         view.setBackground(rounded(SURFACE_ALT, STROKE, 14, 1));
-        view.setLayoutParams(new LinearLayout.LayoutParams(dp(46), dp(46)));
+        view.setLayoutParams(new LinearLayout.LayoutParams(dp(42), dp(42)));
         return view;
     }
 
@@ -601,10 +604,10 @@ public class MainActivity extends Activity {
         view.setText(text);
         view.setGravity(Gravity.CENTER);
         view.setTextColor(TEXT);
-        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 28);
+        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);
         view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         view.setBackground(rounded(SURFACE_ALT, STROKE, 14, 1));
-        view.setLayoutParams(new LinearLayout.LayoutParams(dp(48), dp(46)));
+        view.setLayoutParams(new LinearLayout.LayoutParams(dp(44), dp(42)));
         return view;
     }
 
