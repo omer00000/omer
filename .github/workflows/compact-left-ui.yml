@@ -1,0 +1,67 @@
+name: Compact left-aligned UI
+
+on:
+  push:
+    paths:
+      - '.github/workflows/compact-left-ui.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply compact left aligned layout
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('app/src/main/java/com/omerfaruk/mesaitakvimi/MainActivity.java')
+          text = path.read_text(encoding='utf-8')
+
+          replacements = [
+              ('titleGroup.setOrientation(LinearLayout.VERTICAL);', 'titleGroup.setOrientation(LinearLayout.VERTICAL);\n        titleGroup.setGravity(Gravity.START);'),
+              ('appTitle.setMatrixMetrics(dpFloat(3.2f), dpFloat(2.5f), dpFloat(7f));', 'appTitle.setMatrixMetrics(dpFloat(2.6f), dpFloat(2.0f), dpFloat(5.6f));\n        appTitle.setGravity(Gravity.START);'),
+              ('subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);', 'subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);\n        subtitle.setGravity(Gravity.START);'),
+              ('nav.setPadding(0, dp(24), 0, dp(16));', 'nav.setPadding(0, dp(18), 0, dp(12));'),
+              ('monthTitle.setMatrixMetrics(dpFloat(3.0f), dpFloat(2.3f), dpFloat(6.5f));', 'monthTitle.setMatrixMetrics(dpFloat(2.35f), dpFloat(1.85f), dpFloat(5.2f));'),
+              ('monthTitle.setGravity(Gravity.CENTER);', 'monthTitle.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);'),
+              ('monthLp.leftMargin = dp(10);', 'monthLp.leftMargin = dp(8);'),
+              ('monthLp.rightMargin = dp(10);', 'monthLp.rightMargin = dp(8);'),
+              ('totalText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);', 'totalText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);'),
+              ('totalText.setPadding(dp(16), dp(14), dp(16), dp(14));', 'totalText.setPadding(dp(14), dp(12), dp(14), dp(12));'),
+              ('weekHeader.setPadding(0, dp(18), 0, dp(8));', 'weekHeader.setPadding(0, dp(14), 0, dp(6));'),
+              ('day.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);', 'day.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);'),
+              ('weekHeader.addView(day, new LinearLayout.LayoutParams(0, dp(34), 1f));', 'weekHeader.addView(day, new LinearLayout.LayoutParams(0, dp(30), 1f));'),
+              ('lp.setMargins(dp(3), dp(3), dp(3), dp(3));', 'lp.setMargins(dp(2), dp(2), dp(2), dp(2));'),
+              ('cell.setPadding(dp(3), dp(7), dp(3), dp(7));', 'cell.setPadding(dp(3), dp(5), dp(3), dp(5));'),
+              ('cell.setBackground(rounded(fill, border, 18, borderWidth));', 'cell.setBackground(rounded(fill, border, 16, borderWidth));'),
+              ('dayNo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);', 'dayNo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);'),
+              ('hourText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);', 'hourText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);'),
+              ('hourText.setPadding(0, dp(6), 0, 0);', 'hourText.setPadding(0, dp(4), 0, 0);'),
+              ('lp.height = dp(72);', 'lp.height = dp(64);'),
+              ('view.setLayoutParams(new LinearLayout.LayoutParams(dp(46), dp(46)));', 'view.setLayoutParams(new LinearLayout.LayoutParams(dp(42), dp(42)));'),
+              ('view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 28);', 'view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);'),
+              ('view.setLayoutParams(new LinearLayout.LayoutParams(dp(48), dp(46)));', 'view.setLayoutParams(new LinearLayout.LayoutParams(dp(44), dp(42)));'),
+              ('Sürüm: 1.4', 'Sürüm: 1.5'),
+          ]
+
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f'Expected text not found: {old}')
+              text = text.replace(old, new)
+
+          path.write_text(text, encoding='utf-8')
+
+      - name: Commit UI update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/omerfaruk/mesaitakvimi/MainActivity.java
+          git commit -m "UI: compact layout and left align titles"
+          git push
