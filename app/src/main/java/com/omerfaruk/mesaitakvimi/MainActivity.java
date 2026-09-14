@@ -134,14 +134,14 @@ public class MainActivity extends Activity {
         DotMatrixTextView appTitle = new DotMatrixTextView(this);
         appTitle.setText(normalizeDotsText("Mesai Takvimi"));
         appTitle.setDotColor(TEXT);
-        appTitle.setMatrixMetrics(dpFloat(2.6f), dpFloat(2.0f), dpFloat(5.6f));
+        appTitle.setMatrixMetrics(dpFloat(1.8f), dpFloat(1.35f), dpFloat(4.1f));
         appTitle.setGravity(Gravity.START);
         titleGroup.addView(appTitle);
 
         TextView subtitle = new TextView(this);
         subtitle.setText("Aylık mesai kaydı");
         subtitle.setTextColor(TEXT_MUTED);
-        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
         subtitle.setGravity(Gravity.START);
         subtitle.setPadding(0, dp(2), 0, 0);
         titleGroup.addView(subtitle);
@@ -164,7 +164,7 @@ public class MainActivity extends Activity {
 
         monthTitle = new DotMatrixTextView(this);
         monthTitle.setDotColor(TEXT);
-        monthTitle.setMatrixMetrics(dpFloat(2.35f), dpFloat(1.85f), dpFloat(5.2f));
+        monthTitle.setMatrixMetrics(dpFloat(1.7f), dpFloat(1.3f), dpFloat(3.9f));
         monthTitle.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         LinearLayout.LayoutParams monthLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         monthLp.leftMargin = dp(8);
@@ -181,7 +181,7 @@ public class MainActivity extends Activity {
         totalText = new TextView(this);
         totalText.setGravity(Gravity.CENTER_VERTICAL);
         totalText.setTextColor(TEXT);
-        totalText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        totalText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         totalText.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         totalText.setPadding(dp(14), dp(12), dp(14), dp(12));
         totalText.setBackground(rounded(SURFACE_ALT, STROKE, 18, 1));
@@ -415,7 +415,7 @@ public class MainActivity extends Activity {
     private void showAbout() {
         new AlertDialog.Builder(this)
                 .setTitle("Mesai Takvimi")
-                .setMessage("Yapımcı: Ömer Faruk Boz\nSürüm: 1.5\n\nVeriler yalnızca telefonda saklanır. Yedekleme ile JSON dosyası olarak dışa ve içe aktarılabilir.")
+                .setMessage("Yapımcı: Ömer Faruk Boz\nSürüm: 1.6\n\nVeriler yalnızca telefonda saklanır. Yedekleme ile JSON dosyası olarak dışa ve içe aktarılabilir.")
                 .setPositiveButton("Tamam", null)
                 .show();
     }
