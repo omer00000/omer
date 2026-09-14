@@ -1,0 +1,42 @@
+name: Shrink UI text
+
+on:
+  push:
+    paths:
+      - '.github/workflows/shrink-ui-text.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  shrink:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kaynak kodu al
+        uses: actions/checkout@v4
+      - name: Yazıları küçült
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/omerfaruk/mesaitakvimi/MainActivity.java')
+          s = p.read_text(encoding='utf-8')
+          replacements = {
+              'appTitle.setMatrixMetrics(dpFloat(2.6f), dpFloat(2.0f), dpFloat(5.6f));': 'appTitle.setMatrixMetrics(dpFloat(1.8f), dpFloat(1.35f), dpFloat(4.1f));',
+              'subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);': 'subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);',
+              'monthTitle.setMatrixMetrics(dpFloat(2.35f), dpFloat(1.85f), dpFloat(5.2f));': 'monthTitle.setMatrixMetrics(dpFloat(1.7f), dpFloat(1.3f), dpFloat(3.9f));',
+              'totalText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);': 'totalText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);',
+              '.setMessage("Yapımcı: Ömer Faruk Boz\\nSürüm: 1.5\\n\\nVeriler yalnızca telefonda saklanır. Yedekleme ile JSON dosyası olarak dışa ve içe aktarılabilir.")': '.setMessage("Yapımcı: Ömer Faruk Boz\\nSürüm: 1.6\\n\\nVeriler yalnızca telefonda saklanır. Yedekleme ile JSON dosyası olarak dışa ve içe aktarılabilir.")'
+          }
+          for old, new in replacements.items():
+              if old not in s:
+                  raise SystemExit(f'Beklenen metin bulunamadı: {old}')
+              s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Değişikliği kaydet
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/omerfaruk/mesaitakvimi/MainActivity.java
+          git commit -m "UI yazılarını belirgin şekilde küçült" || exit 0
+          git push
