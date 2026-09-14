@@ -1,0 +1,56 @@
+name: Mesai Takvimi Nothing Style
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/apply-nothing-style.yml"
+      - "tools/apply_nothing_style.py"
+
+permissions:
+  contents: write
+
+jobs:
+  apply-build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Kaynak kodu al
+        uses: actions/checkout@v4
+
+      - name: Nothing tasarımını uygula
+        run: python3 tools/apply_nothing_style.py
+
+      - name: Java 17 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle kur
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: APK derle
+        run: gradle --no-daemon :app:assembleDebug
+
+      - name: APK adını düzenle
+        run: cp app/build/outputs/apk/debug/app-debug.apk Mesai-Takvimi-Nothing.apk
+
+      - name: APK dosyasını yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mesai-Takvimi-Nothing-APK
+          path: Mesai-Takvimi-Nothing.apk
+          retention-days: 30
+
+      - name: Kaynak değişikliklerini kaydet
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/omerfaruk/mesaitakvimi/MainActivity.java
+          git diff --cached --quiet && exit 0
+          git commit -m "Mesai Takvimi arayüzünü Nothing tarzına geçir"
+          git push
