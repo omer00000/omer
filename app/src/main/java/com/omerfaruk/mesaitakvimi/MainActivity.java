@@ -43,15 +43,15 @@ import java.util.TreeMap;
 
 public class MainActivity extends Activity {
 
-    private static final int BG = Color.rgb(9, 13, 19);
-    private static final int SURFACE = Color.rgb(18, 24, 33);
-    private static final int SURFACE_ALT = Color.rgb(23, 31, 42);
-    private static final int STROKE = Color.rgb(39, 51, 68);
-    private static final int TEXT = Color.rgb(244, 247, 251);
-    private static final int TEXT_MUTED = Color.rgb(159, 174, 194);
-    private static final int ACCENT = Color.rgb(80, 157, 255);
-    private static final int ACCENT_SOFT = Color.rgb(24, 48, 77);
-    private static final int GREEN = Color.rgb(91, 214, 153);
+    private static final int BG = Color.parseColor("#000000");
+    private static final int SURFACE = Color.parseColor("#0E0E0E");
+    private static final int SURFACE_ALT = Color.parseColor("#141414");
+    private static final int STROKE = Color.parseColor("#2A2A2A");
+    private static final int TEXT = Color.parseColor("#F2F2F2");
+    private static final int TEXT_MUTED = Color.parseColor("#A2A2A2");
+    private static final int ACCENT = Color.parseColor("#EDEDED");
+    private static final int ACCENT_SOFT = Color.parseColor("#1C1C1C");
+    private static final int GREEN = Color.parseColor("#F2F2F2");
 
     private static final String PREFS_NAME = "mesai_kayitlari";
     private static final String PREFIX_MINUTES = "m:";
@@ -64,7 +64,7 @@ public class MainActivity extends Activity {
 
     private Calendar shownMonth;
     private SharedPreferences prefs;
-    private TextView monthTitle;
+    private DotMatrixTextView monthTitle;
     private TextView totalText;
     private GridLayout calendarGrid;
     private LinearLayout calendarSection;
@@ -118,22 +118,22 @@ public class MainActivity extends Activity {
     private void buildScreen() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(14), dp(18), dp(14), dp(12));
+        root.setPadding(dp(16), getStatusBarInset() + dp(14), dp(16), dp(16));
         root.setBackgroundColor(BG);
 
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL);
-        top.setGravity(Gravity.CENTER_VERTICAL);
+        top.setGravity(Gravity.TOP | Gravity.CENTER_VERTICAL);
+        top.setPadding(0, dp(6), 0, 0);
 
         LinearLayout titleGroup = new LinearLayout(this);
         titleGroup.setOrientation(LinearLayout.VERTICAL);
         top.addView(titleGroup, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        TextView appTitle = new TextView(this);
-        appTitle.setText("Mesai Takvimi");
-        appTitle.setTextColor(TEXT);
-        appTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
-        appTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        DotMatrixTextView appTitle = new DotMatrixTextView(this);
+        appTitle.setText(normalizeDotsText("Mesai Takvimi"));
+        appTitle.setDotColor(TEXT);
+        appTitle.setMatrixMetrics(dpFloat(3.2f), dpFloat(2.5f), dpFloat(7f));
         titleGroup.addView(appTitle);
 
         TextView subtitle = new TextView(this);
@@ -152,19 +152,21 @@ public class MainActivity extends Activity {
         LinearLayout nav = new LinearLayout(this);
         nav.setOrientation(LinearLayout.HORIZONTAL);
         nav.setGravity(Gravity.CENTER_VERTICAL);
-        nav.setPadding(0, dp(16), 0, dp(12));
+        nav.setPadding(0, dp(24), 0, dp(16));
 
         TextView prev = navButton("‹");
         prev.setContentDescription("Önceki ay");
         prev.setOnClickListener(v -> animateMonthChange(-1));
         nav.addView(prev);
 
-        monthTitle = new TextView(this);
+        monthTitle = new DotMatrixTextView(this);
+        monthTitle.setDotColor(TEXT);
+        monthTitle.setMatrixMetrics(dpFloat(3.0f), dpFloat(2.3f), dpFloat(6.5f));
         monthTitle.setGravity(Gravity.CENTER);
-        monthTitle.setTextColor(TEXT);
-        monthTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 21);
-        monthTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        nav.addView(monthTitle, new LinearLayout.LayoutParams(0, dp(46), 1f));
+        LinearLayout.LayoutParams monthLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        monthLp.leftMargin = dp(10);
+        monthLp.rightMargin = dp(10);
+        nav.addView(monthTitle, monthLp);
 
         TextView next = navButton("›");
         next.setContentDescription("Sonraki ay");
@@ -189,7 +191,7 @@ public class MainActivity extends Activity {
 
         LinearLayout weekHeader = new LinearLayout(this);
         weekHeader.setOrientation(LinearLayout.HORIZONTAL);
-        weekHeader.setPadding(0, dp(14), 0, dp(5));
+        weekHeader.setPadding(0, dp(18), 0, dp(8));
         String[] dayNames = {"Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"};
         for (String name : dayNames) {
             TextView day = new TextView(this);
@@ -233,7 +235,7 @@ public class MainActivity extends Activity {
 
         String[] months = new DateFormatSymbols(tr).getMonths();
         String monthName = months[shownMonth.get(Calendar.MONTH)];
-        monthTitle.setText(capitalize(monthName) + " " + shownMonth.get(Calendar.YEAR));
+        monthTitle.setText(normalizeDotsText(capitalize(monthName) + " " + shownMonth.get(Calendar.YEAR)));
 
         Calendar first = (Calendar) shownMonth.clone();
         int mondayIndex = (first.get(Calendar.DAY_OF_WEEK) + 5) % 7;
@@ -265,7 +267,7 @@ public class MainActivity extends Activity {
         GridLayout.LayoutParams lp = cellParams();
         lp.setMargins(dp(3), dp(3), dp(3), dp(3));
         blank.setLayoutParams(lp);
-        blank.setBackground(rounded(Color.rgb(12, 17, 24), Color.rgb(26, 34, 46), 15, 1));
+        blank.setBackground(rounded(Color.parseColor("#050505"), Color.parseColor("#171717"), 18, 1));
         calendarGrid.addView(blank);
     }
 
@@ -279,9 +281,9 @@ public class MainActivity extends Activity {
         cell.setPadding(dp(3), dp(7), dp(3), dp(7));
 
         int fill = hasHours ? ACCENT_SOFT : SURFACE;
-        int border = today ? ACCENT : (hasHours ? Color.rgb(54, 93, 137) : STROKE);
+        int border = today ? ACCENT : STROKE;
         int borderWidth = today ? 2 : 1;
-        cell.setBackground(rounded(fill, border, 15, borderWidth));
+        cell.setBackground(rounded(fill, border, 18, borderWidth));
         cell.setElevation(dp(1));
 
         TextView dayNo = new TextView(this);
@@ -295,8 +297,8 @@ public class MainActivity extends Activity {
         TextView hourText = new TextView(this);
         hourText.setText(hasHours ? formatDayMinutes(minutes) : "");
         hourText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        hourText.setTextColor(hasHours ? GREEN : TEXT_MUTED);
-        hourText.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        hourText.setTextColor(hasHours ? TEXT : TEXT_MUTED);
+        hourText.setTypeface(Typeface.DEFAULT, Typeface.NORMAL);
         hourText.setGravity(Gravity.CENTER);
         hourText.setPadding(0, dp(6), 0, 0);
         cell.addView(hourText);
@@ -410,7 +412,7 @@ public class MainActivity extends Activity {
     private void showAbout() {
         new AlertDialog.Builder(this)
                 .setTitle("Mesai Takvimi")
-                .setMessage("Yapımcı: Ömer Faruk Boz\nSürüm: 1.3\n\nVeriler yalnızca telefonda saklanır. Yedekleme ile JSON dosyası olarak dışa ve içe aktarılabilir.")
+                .setMessage("Yapımcı: Ömer Faruk Boz\nSürüm: 1.4\n\nVeriler yalnızca telefonda saklanır. Yedekleme ile JSON dosyası olarak dışa ve içe aktarılabilir.")
                 .setPositiveButton("Tamam", null)
                 .show();
     }
@@ -654,9 +656,32 @@ public class MainActivity extends Activity {
         return hours + " sa " + mins + " dk";
     }
 
+    private String normalizeDotsText(String value) {
+        if (value == null) return "";
+        String upper = value.toUpperCase(tr);
+        return upper.replace('Ç', 'C')
+                .replace('Ğ', 'G')
+                .replace('İ', 'I')
+                .replace('Ö', 'O')
+                .replace('Ş', 'S')
+                .replace('Ü', 'U');
+    }
+
     private String capitalize(String value) {
         if (value == null || value.isEmpty()) return value;
         return value.substring(0, 1).toUpperCase(tr) + value.substring(1);
+    }
+
+    private int getStatusBarInset() {
+        int resId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (resId > 0) {
+            return getResources().getDimensionPixelSize(resId);
+        }
+        return dp(24);
+    }
+
+    private float dpFloat(float value) {
+        return value * getResources().getDisplayMetrics().density;
     }
 
     private int dp(int value) {
