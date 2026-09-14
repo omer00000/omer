@@ -4,10 +4,12 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.TimePickerDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.TypedValue;
@@ -22,10 +24,22 @@ import android.widget.GridLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormatSymbols;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.Iterator;
 import java.util.Locale;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class MainActivity extends Activity {
 
@@ -41,6 +55,10 @@ public class MainActivity extends Activity {
 
     private static final String PREFS_NAME = "mesai_kayitlari";
     private static final String PREFIX_MINUTES = "m:";
+    private static final String BACKUP_FORMAT = "MesaiTakvimiBackup";
+    private static final int BACKUP_VERSION = 1;
+    private static final int REQUEST_EXPORT_BACKUP = 1201;
+    private static final int REQUEST_IMPORT_BACKUP = 1202;
 
     private final Locale tr = new Locale("tr", "TR");
 
@@ -73,6 +91,28 @@ public class MainActivity extends Activity {
             gestureDetector.onTouchEvent(event);
         }
         return super.dispatchTouchEvent(event);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+            return;
+        }
+
+        Uri uri = data.getData();
+
+        if (requestCode == REQUEST_EXPORT_BACKUP) {
+            writeBackup(uri);
+        } else if (requestCode == REQUEST_IMPORT_BACKUP) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Yedeği içe aktar")
+                    .setMessage("Mevcut kayıtlar korunur. Yedekte aynı tarih varsa o kayıt yedekteki değerle değiştirilir. Devam edilsin mi?")
+                    .setNegativeButton("İptal", null)
+                    .setPositiveButton("İçe aktar", (dialog, which) -> importBackup(uri))
+                    .show();
+        }
     }
 
     private void buildScreen() {
@@ -346,11 +386,193 @@ public class MainActivity extends Activity {
     }
 
     private void showSettings() {
+        String[] items = {
+                "Yedeği dışa aktar",
+                "Yedekten içe aktar",
+                "Hakkında"
+        };
+
         new AlertDialog.Builder(this)
                 .setTitle("Ayarlar")
-                .setMessage("Mesai Takvimi\n\nYapımcı: Ömer Faruk Boz\nSürüm: 1.2")
+                .setItems(items, (dialog, which) -> {
+                    if (which == 0) {
+                        startBackupExport();
+                    } else if (which == 1) {
+                        startBackupImport();
+                    } else {
+                        showAbout();
+                    }
+                })
+                .setNegativeButton("Kapat", null)
+                .show();
+    }
+
+    private void showAbout() {
+        new AlertDialog.Builder(this)
+                .setTitle("Mesai Takvimi")
+                .setMessage("Yapımcı: Ömer Faruk Boz\nSürüm: 1.3\n\nVeriler yalnızca telefonda saklanır. Yedekleme ile JSON dosyası olarak dışa ve içe aktarılabilir.")
                 .setPositiveButton("Tamam", null)
                 .show();
+    }
+
+    private void startBackupExport() {
+        String date = new SimpleDateFormat("yyyy-MM-dd", tr).format(new Date());
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        intent.putExtra(Intent.EXTRA_TITLE, "Mesai-Takvimi-Yedek-" + date + ".json");
+        startActivityForResult(intent, REQUEST_EXPORT_BACKUP);
+    }
+
+    private void startBackupImport() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
+                "application/json",
+                "text/plain",
+                "application/octet-stream"
+        });
+        startActivityForResult(intent, REQUEST_IMPORT_BACKUP);
+    }
+
+    private void writeBackup(Uri uri) {
+        try (OutputStream output = getContentResolver().openOutputStream(uri)) {
+            if (output == null) {
+                throw new IllegalStateException("Dosya açılamadı");
+            }
+
+            String json = buildBackupJson().toString(2);
+            output.write(json.getBytes(StandardCharsets.UTF_8));
+            output.flush();
+
+            Toast.makeText(this, "Yedek başarıyla dışa aktarıldı.", Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Dışa aktarma başarısız")
+                    .setMessage("Yedek dosyası yazılamadı.\n\n" + safeError(e))
+                    .setPositiveButton("Tamam", null)
+                    .show();
+        }
+    }
+
+    private JSONObject buildBackupJson() throws Exception {
+        JSONObject root = new JSONObject();
+        root.put("format", BACKUP_FORMAT);
+        root.put("version", BACKUP_VERSION);
+        root.put("app", "Mesai Takvimi");
+        root.put("exportedAt", new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US).format(new Date()));
+
+        JSONObject records = new JSONObject();
+        TreeMap<String, Integer> sorted = new TreeMap<>();
+
+        for (Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
+            String key = entry.getKey();
+            if (!isDateKey(key)) continue;
+
+            int minutes = getStoredMinutes(key);
+            if (minutes > 0) {
+                sorted.put(key, minutes);
+            }
+        }
+
+        for (Map.Entry<String, Integer> entry : sorted.entrySet()) {
+            records.put(entry.getKey(), entry.getValue());
+        }
+
+        root.put("recordCount", sorted.size());
+        root.put("records", records);
+        return root;
+    }
+
+    private void importBackup(Uri uri) {
+        try (InputStream input = getContentResolver().openInputStream(uri)) {
+            if (input == null) {
+                throw new IllegalStateException("Dosya açılamadı");
+            }
+
+            String jsonText = readUtf8(input);
+            JSONObject root = new JSONObject(jsonText);
+
+            if (!BACKUP_FORMAT.equals(root.optString("format"))) {
+                throw new IllegalArgumentException("Bu dosya Mesai Takvimi yedeği değil.");
+            }
+
+            int version = root.optInt("version", -1);
+            if (version < 1 || version > BACKUP_VERSION) {
+                throw new IllegalArgumentException("Desteklenmeyen yedek sürümü: " + version);
+            }
+
+            JSONObject records = root.optJSONObject("records");
+            if (records == null) {
+                throw new IllegalArgumentException("Yedekte kayıt bölümü bulunamadı.");
+            }
+
+            SharedPreferences.Editor editor = prefs.edit();
+            Iterator<String> keys = records.keys();
+            int imported = 0;
+            int skipped = 0;
+
+            while (keys.hasNext()) {
+                String key = keys.next();
+                if (!isDateKey(key)) {
+                    skipped++;
+                    continue;
+                }
+
+                int minutes = records.optInt(key, -1);
+                if (minutes < 0 || minutes > 24 * 60) {
+                    skipped++;
+                    continue;
+                }
+
+                if (minutes == 0) {
+                    editor.remove(key);
+                } else {
+                    editor.putString(key, PREFIX_MINUTES + minutes);
+                }
+                imported++;
+            }
+
+            editor.apply();
+            refreshCalendar();
+
+            String message = imported + " kayıt içe aktarıldı.";
+            if (skipped > 0) {
+                message += "\n" + skipped + " geçersiz kayıt atlandı.";
+            }
+
+            new AlertDialog.Builder(this)
+                    .setTitle("İçe aktarma tamamlandı")
+                    .setMessage(message)
+                    .setPositiveButton("Tamam", null)
+                    .show();
+        } catch (Exception e) {
+            new AlertDialog.Builder(this)
+                    .setTitle("İçe aktarma başarısız")
+                    .setMessage("Yedek dosyası okunamadı.\n\n" + safeError(e))
+                    .setPositiveButton("Tamam", null)
+                    .show();
+        }
+    }
+
+    private String readUtf8(InputStream input) throws Exception {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        byte[] chunk = new byte[4096];
+        int read;
+        while ((read = input.read(chunk)) != -1) {
+            buffer.write(chunk, 0, read);
+        }
+        return new String(buffer.toByteArray(), StandardCharsets.UTF_8);
+    }
+
+    private boolean isDateKey(String key) {
+        return key != null && key.matches("\\d{4}-\\d{2}-\\d{2}");
+    }
+
+    private String safeError(Exception e) {
+        String message = e.getMessage();
+        return TextUtils.isEmpty(message) ? e.getClass().getSimpleName() : message;
     }
 
     private boolean isToday(int day) {
@@ -442,8 +664,8 @@ public class MainActivity extends Activity {
     }
 
     private class SwipeListener extends GestureDetector.SimpleOnGestureListener {
-        private static final int MIN_DISTANCE = 90;
-        private static final int MIN_VELOCITY = 100;
+        private static final int MIN_DISTANCE = 110;
+        private static final int MIN_VELOCITY = 120;
 
         @Override
         public boolean onDown(MotionEvent e) {
@@ -460,7 +682,11 @@ public class MainActivity extends Activity {
             if (Math.abs(diffX) > Math.abs(diffY)
                     && Math.abs(diffX) > MIN_DISTANCE
                     && Math.abs(velocityX) > MIN_VELOCITY) {
-                animateMonthChange(diffX < 0 ? 1 : -1);
+                if (diffX < 0) {
+                    animateMonthChange(1);
+                } else {
+                    animateMonthChange(-1);
+                }
                 return true;
             }
             return false;
