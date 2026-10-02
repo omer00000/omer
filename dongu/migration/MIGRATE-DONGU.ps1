@@ -47,8 +47,14 @@ if ($devices.Count -ne 1) {
 }
 
 Write-Host "[1/7] Eski Dongu uygulamasi kontrol ediliyor..."
-& $script:Adb shell pm path $Package | Out-Null
-if ($LASTEXITCODE -ne 0) { throw "Eski Dongu uygulamasi telefonda bulunamadi." }
+$packagePath = (& $script:Adb shell pm path $Package 2>$null | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or $packagePath -notmatch "^package:") {
+    throw "Eski Dongu uygulamasi telefonda bulunamadi."
+}
+
+# Uygulamayi kapat: diskteki SharedPreferences dosyasinin sabit bir anlik goruntusunu alalim.
+& $script:Adb shell am force-stop $Package | Out-Null
+Start-Sleep -Milliseconds 700
 
 Write-Host "[2/7] Uygulama verisi telefondan okunuyor..."
 & $script:Adb shell "run-as $Package cat shared_prefs/dongu_data.xml > /data/local/tmp/dongu_data.xml"
