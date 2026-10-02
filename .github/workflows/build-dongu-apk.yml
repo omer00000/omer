@@ -11,6 +11,12 @@ on:
 permissions:
   contents: read
 
+env:
+  DONGU_KEYSTORE_BASE64: ${{ secrets.DONGU_KEYSTORE_BASE64 }}
+  DONGU_KEYSTORE_PASSWORD: ${{ secrets.DONGU_KEYSTORE_PASSWORD }}
+  DONGU_KEY_ALIAS: ${{ secrets.DONGU_KEY_ALIAS }}
+  DONGU_KEY_PASSWORD: ${{ secrets.DONGU_KEY_PASSWORD }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -33,16 +39,55 @@ jobs:
       - name: Android SDK 35'i doğrula
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" || true
 
-      - name: APK derle
+      - name: Kod derleme kontrolü
         working-directory: dongu
         run: gradle --no-daemon :app:assembleDebug
 
-      - name: APK adını düzenle
-        run: cp dongu/app/build/outputs/apk/debug/app-debug.apk Dongu.apk
+      - name: İmzasız release APK üret
+        working-directory: dongu
+        run: gradle --no-daemon :app:assembleRelease
 
-      - name: APK dosyasını yükle
+      - name: Kalıcı imza anahtarını hazırla
+        if: ${{ env.DONGU_KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "$DONGU_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/dongu-release.jks"
+
+      - name: Release APK'yı kalıcı anahtarla imzala
+        if: ${{ env.DONGU_KEYSTORE_BASE64 != '' }}
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign \
+            --ks "$RUNNER_TEMP/dongu-release.jks" \
+            --ks-key-alias "$DONGU_KEY_ALIAS" \
+            --ks-pass env:DONGU_KEYSTORE_PASSWORD \
+            --key-pass env:DONGU_KEY_PASSWORD \
+            --out Dongu.apk \
+            dongu/app/build/outputs/apk/release/app-release-unsigned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs Dongu.apk
+
+      - name: İmzalı güncelleme APK'sını yükle
+        if: ${{ env.DONGU_KEYSTORE_BASE64 != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: Dongu-APK
           path: Dongu.apk
           retention-days: 30
+
+      - name: Secrets yoksa test APK'sını hazırla
+        if: ${{ env.DONGU_KEYSTORE_BASE64 == '' }}
+        run: cp dongu/app/build/outputs/apk/debug/app-debug.apk Dongu-TEST-debug.apk
+
+      - name: Secrets yoksa test APK'sını yükle
+        if: ${{ env.DONGU_KEYSTORE_BASE64 == '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dongu-Test-APK-NON-UPDATABLE
+          path: Dongu-TEST-debug.apk
+          retention-days: 7
+
+      - name: İmzasız release APK'yı yükle
+        if: ${{ env.DONGU_KEYSTORE_BASE64 == '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dongu-Unsigned-Release
+          path: dongu/app/build/outputs/apk/release/app-release-unsigned.apk
+          retention-days: 7
