@@ -6,7 +6,8 @@
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="Döngü"
+        android:label="@string/app_name"
+        android:manageSpaceActivity=".BackupActivity"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.Dongu">
@@ -17,7 +18,14 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
+
+        <activity
+            android:name=".BackupActivity"
+            android:exported="true" />
 
         <receiver
             android:name=".PeriodReminderReceiver"
