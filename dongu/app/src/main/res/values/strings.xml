@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Döngü</string>
+    <string name="shortcut_backup_short">Yedekleme</string>
+    <string name="shortcut_backup_long">Döngü verilerini yedekle veya geri yükle</string>
+</resources>
