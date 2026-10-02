@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="backup"
+        android:enabled="true"
+        android:icon="@drawable/ic_stat_drop"
+        android:shortcutShortLabel="@string/shortcut_backup_short"
+        android:shortcutLongLabel="@string/shortcut_backup_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.omerfaruk.dongu"
+            android:targetClass="com.omerfaruk.dongu.BackupActivity" />
+    </shortcut>
+</shortcuts>
