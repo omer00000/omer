@@ -25,6 +25,14 @@ android {
         compose = true
     }
 
+    buildTypes {
+        create("migration") {
+            initWith(getByName("release"))
+            isDebuggable = true
+            matchingFallbacks += listOf("release")
+        }
+    }
+
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
